@@ -12,7 +12,7 @@ import java.util.*;
  */
 public class Pruebitas {
 
-    static final int TAMANO_TROZO = 5; // cantidad de números que se cargan en memoria
+    static final int TAMANO_TROZO = 5; 
 
     public static void main(String[] args) throws Exception {
         String archivoEntrada = "entrada.txt";
