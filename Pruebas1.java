@@ -14,7 +14,7 @@ public class Pruebas1 {
     static int[] edades = {5,7,10,2,8};
     static class Par { String nombre; int edad; Par(String n,int e){nombre=n;edad=e;} }
 
-    // 1) Hash (búsqueda)
+    // HAAash 
     static void busquedaHashDemo(String buscado) {
         Map<String,Integer> map = new HashMap<>();
         for (int i=0;i<nombres.length;i++) map.put(nombres[i].toLowerCase(), edades[i]);
@@ -30,10 +30,8 @@ public class Pruebas1 {
         for (Par p : a) System.out.println(p.nombre + " (" + p.edad + ")");
     }
 
-    // 3) Orden externo (ejemplo muy simple que asume archivo formato "Nombre,edad")
+    // Ordenacion externo+a 
     static void ordenacionExternaDemo(String in, String out, int chunkSize) throws IOException {
-        // copia exacta de la técnica externalSort: dividir en chunks, ordenar, k-way merge
-        // por brevedad aquí llamamos al método externo (puedes pegar implementación completa si la necesitas)
         OrdenExterno.externalSort(in, out, chunkSize);
     }
 
@@ -42,8 +40,6 @@ public class Pruebas1 {
         busquedaHashDemo("shiro");
         System.out.println("\nOrden interno demo:");
         ordenacionInternaDemo();
-        // Para probar externa: crea datos.txt y descomenta línea siguiente
-        // ordenacionExternaDemo("datos.txt","ordenado.txt",1000);
     }
 
     // Clase implementación de externalSort 
