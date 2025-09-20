@@ -3,87 +3,87 @@
  */
 
 package com.mycompany.pruebitas;
-
-import java.io.*;
+   import java.io.*;
 import java.util.*;
 /**
  *
  * @author Usuario
  */
-public class Pruebitas {
 
-    static final int TAMANO_TROZO = 5; 
+
+public class Pruebitas {
+    static String[] nombres = {"Ayato","Dai","Spicke","Shiro","Osito"};
+    static int[] edades = {5,7,10,2,8};
+    static class Par { String nombre; int edad; Par(String n,int e){nombre=n;edad=e;} }
+
+    // Hash (búsqueda)
+    static void busquedaHashDemo(String buscado) {
+        Map<String,Integer> map = new HashMap<>();
+        for (int i=0;i<nombres.length;i++) map.put(nombres[i].toLowerCase(), edades[i]);
+        Integer edad = map.get(buscado.toLowerCase());
+        System.out.println(edad != null ? buscado + " -> " + edad + " meses" : "No encontrado");
+    }
+
+    // Orden interno
+    static void ordenacionInternaDemo() {
+        Par[] a = new Par[nombres.length];
+        for (int i=0;i<nombres.length;i++) a[i] = new Par(nombres[i], edades[i]);
+        Arrays.sort(a, (p1,p2) -> p1.nombre.compareToIgnoreCase(p2.nombre));
+        for (Par p : a) System.out.println(p.nombre + " (" + p.edad + ")");
+    }
+
+    // orden externo 
+    static void ordenacionExternaDemo(String in, String out, int chunkSize) throws IOException {
+        OrdenExterno.externalSort(in, out, chunkSize);
+    }
 
     public static void main(String[] args) throws Exception {
-        String archivoEntrada = "entrada.txt";
-        String archivoSalida = "salida.txt";
-
-        List<String> archivosTemporales = dividirEnTrozos(archivoEntrada);
-        mezclarArchivos(archivosTemporales, archivoSalida);
-        System.out.println("Ordenamiento externo completado. Revisar " + archivoSalida);
+        System.out.println("Hash demo:");
+        busquedaHashDemo("shiro");
+        System.out.println("\nOrden interno demo:");
+        ordenacionInternaDemo();
     }
 
-    static List<String> dividirEnTrozos(String archivo) throws Exception {
-        BufferedReader br = new BufferedReader(new FileReader(archivo));
-        List<String> archivos = new ArrayList<>();
-        List<Integer> buffer = new ArrayList<>();
-        String linea;
-        int contador = 0;
-
-        while ((linea = br.readLine()) != null) {
-            buffer.add(Integer.parseInt(linea));
-            if (buffer.size() == TAMANO_TROZO) {
-                archivos.add(guardarTrozo(buffer, contador++));
-                buffer.clear();
+    // Clase implementada de externalSort 
+    static class OrdenExterno {
+        static void externalSort(String inputFile, String outputFile, int chunkSize) throws IOException {
+            List<File> chunks = new ArrayList<>();
+            try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
+                List<String> buffer = new ArrayList<>(chunkSize);
+                String line;
+                while ((line = br.readLine()) != null) {
+                    buffer.add(line);
+                    if (buffer.size() >= chunkSize) { chunks.add(writeSortedChunk(buffer)); buffer.clear(); }
+                }
+                if (!buffer.isEmpty()) chunks.add(writeSortedChunk(buffer));
             }
-        }
-        if (!buffer.isEmpty()) {
-            archivos.add(guardarTrozo(buffer, contador++));
-        }
-        br.close();
-        return archivos;
-    }
-
-    static String guardarTrozo(List<Integer> buffer, int num) throws Exception {
-        Collections.sort(buffer);
-        String nombre = "trozo" + num + ".txt";
-        BufferedWriter bw = new BufferedWriter(new FileWriter(nombre));
-        for (int n : buffer) {
-            bw.write(n + "\n");
-        }
-        bw.close();
-        return nombre;
-    }
-
-    static void mezclarArchivos(List<String> archivos, String archivoSalida) throws Exception {
-        PriorityQueue<Nodo> pq = new PriorityQueue<>(Comparator.comparingInt(n -> n.valor));
-        List<BufferedReader> lectores = new ArrayList<>();
-
-        for (String archivo : archivos) {
-            BufferedReader br = new BufferedReader(new FileReader(archivo));
-            lectores.add(br);
-            String linea = br.readLine();
-            if (linea != null) pq.add(new Nodo(Integer.parseInt(linea), br));
-        }
-
-        BufferedWriter bw = new BufferedWriter(new FileWriter(archivoSalida));
-
-        while (!pq.isEmpty()) {
-            Nodo nodo = pq.poll();
-            bw.write(nodo.valor + "\n");
-            String linea = nodo.origen.readLine();
-            if (linea != null) {
-                pq.add(new Nodo(Integer.parseInt(linea), nodo.origen));
+            PriorityQueue<Node> pq = new PriorityQueue<>(Comparator.comparing(n->n.line, String.CASE_INSENSITIVE_ORDER));
+            List<BufferedReader> readers = new ArrayList<>();
+            for (File f : chunks) {
+                BufferedReader r = new BufferedReader(new FileReader(f));
+                readers.add(r);
+                String first = r.readLine();
+                if (first != null) pq.add(new Node(first, readers.size()-1));
             }
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+                while (!pq.isEmpty()) {
+                    Node n = pq.poll();
+                    bw.write(n.line); bw.newLine();
+                    String next = readers.get(n.readerIdx).readLine();
+                    if (next != null) pq.add(new Node(next, n.readerIdx));
+                }
+            }
+            for (BufferedReader r : readers) r.close();
+            for (File f : chunks) f.delete();
         }
-
-        bw.close();
-        for (BufferedReader br : lectores) br.close();
-    }
-
-    static class Nodo {
-        int valor;
-        BufferedReader origen;
-        Nodo(int v, BufferedReader o) { valor = v; origen = o; }
+        static File writeSortedChunk(List<String> lines) throws IOException {
+            Collections.sort(lines, String.CASE_INSENSITIVE_ORDER);
+            File tmp = File.createTempFile("chunk", ".tmp");
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(tmp))) {
+                for (String s : lines) bw.write(s + "\n");
+            }
+            return tmp;
+        }
+        static class Node { String line; int readerIdx; Node(String l,int i){line=l;readerIdx=i;} }
     }
 }
